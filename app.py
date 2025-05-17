@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify
 from filtro_cuda import generar_mascara_gaussiana, aplicar_filtro_cuda
 from filtro_pixel import aplicar_pixelado_3d
 from filtro_arcoiris import filtro_bordes_con_fondo
+from filtro_laplaciano import aplicar_filtro_laplaciano
+from filtro_ups import filtro_ups
 import numpy as np
 import cv2
 import base64
@@ -10,12 +12,12 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-# 🎯 Parámetros fijos
+#Parámetros fijos
 TAMANIO_MASCARA = 15
 SIGMA = 8.0
 BLOCK_X = 32
 BLOCK_Y = 32
-ANCHO_OBJETIVO = 1242  # Nuevo parámetro para redimensionar
+ANCHO_OBJETIVO = 1242  #medida redimensionar
 
 def redimensionar_imagen(img, ancho_objetivo=1242):
     h, w = img.shape[:2]
@@ -108,6 +110,59 @@ def aplicar_rainbow():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route("/ups", methods=["POST"])
+def aplicar_ups():
+    if 'image' not in request.files:
+        return jsonify({"error": "No se envió una imagen"}), 400
+
+    try:
+        archivo = request.files['image']
+        archivo_np = np.frombuffer(archivo.read(), np.uint8)
+        imagen = cv2.imdecode(archivo_np, cv2.IMREAD_COLOR)
+
+        if imagen is None:
+            return jsonify({"error": "Imagen no válida"}), 400
+
+        imagen_redim, _ = redimensionar_imagen(imagen)
+
+        resultado = filtro_ups(imagen_redim)
+
+        _, buffer = cv2.imencode('.jpg', resultado)
+        base64_img = base64.b64encode(buffer).decode('utf-8')
+
+        return jsonify({"imagen": base64_img})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/laplaciano", methods=["POST"])
+def aplicar_laplaciano():
+    if 'image' not in request.files:
+        return jsonify({"error": "No se envió una imagen"}), 400
+
+    try:
+        archivo = request.files['image']
+        archivo_np = np.frombuffer(archivo.read(), np.uint8)
+        imagen = cv2.imdecode(archivo_np, cv2.IMREAD_COLOR)
+
+        if imagen is None:
+            return jsonify({"error": "Imagen no válida"}), 400
+
+        #Redimensionar
+        imagen_redim, _ = redimensionar_imagen(imagen)
+
+        #Aplicar filtro
+        resultado = aplicar_filtro_laplaciano(imagen_redim)
+
+        _, buffer = cv2.imencode('.jpg', resultado)
+        base64_img = base64.b64encode(buffer).decode('utf-8')
+
+        return jsonify({"imagen": base64_img})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 
 if __name__ == "__main__":
