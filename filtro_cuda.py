@@ -82,7 +82,7 @@ def aplicar_filtro_cuda(imagen, mascara, block_x=32, block_y=32):
         img_gpu.free()
         out_gpu.free()
 
-        return salida, tiempo, grid_x, grid_y
+        return salida
 
     finally:
         context.pop()
