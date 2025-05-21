@@ -21,7 +21,14 @@ def generar_mascara_gaussiana(tamaño, sigma):
 def aplicar_filtro_cuda(imagen, mascara, block_x=32, block_y=32):
     context = device.make_context()
     try:
-        height, width, channels = imagen.shape
+        # ✅ Forzar imagen a color 3 canales si viene en escala de grises
+        if len(imagen.shape) == 2:
+            imagen = cv2.cvtColor(imagen, cv2.COLOR_GRAY2BGR)
+        elif len(imagen.shape) == 3 and imagen.shape[2] == 1:
+            imagen = cv2.cvtColor(imagen, cv2.COLOR_GRAY2BGR)
+
+        height, width = imagen.shape[:2]
+        channels = 3  # Forzado por conversión anterior
         tamaño = mascara.shape[0]
         MAX = 71
 
