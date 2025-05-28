@@ -251,15 +251,12 @@ def aplicar_mixto():
 
     try:
         data = request.get_json()
-        if 'image' not in data or 'filtro1' not in data or 'filtro2' not in data:
-            return jsonify({"error": "Debes enviar 'image', 'filtro1' y 'filtro2'"}), 400
+        if 'image' not in data:
+            return jsonify({"error": "Debes enviar 'image'"}), 400
 
-        filtro1 = data['filtro1'].lower()
-        filtro2 = data['filtro2'].lower()
+        filtro1 = "rainbow"
+        filtro2 = "pixel"
 
-        filtros_disponibles = ['gaussiano', 'pixel', 'rainbow', 'laplaciano']
-        if filtro1 not in filtros_disponibles or filtro2 not in filtros_disponibles:
-            return jsonify({"error": f"Filtros válidos: {', '.join(filtros_disponibles)}"}), 400
         
         imagen_base64 = data["image"]
         imagen_bytes = base64.b64decode(imagen_base64)
