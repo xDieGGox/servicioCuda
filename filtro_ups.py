@@ -29,18 +29,18 @@ __global__ void filtro_artistico(unsigned char* img, unsigned char* out, int w, 
 def detectar_rostros_y_ojos(imagen_color):
     gray = cv2.cvtColor(imagen_color, cv2.COLOR_BGR2GRAY)
     face_cascade = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
-    eye_cascade = cv2.CascadeClassifier("haarcascade_eye.xml")
+    #eye_cascade = cv2.CascadeClassifier("haarcascade_eye.xml")
 
     rostros = face_cascade.detectMultiScale(gray, 1.3, 5)
-    ojos_todos = []
+    #ojos_todos = []
 
-    for (x, y, w, h) in rostros:
-        roi_gray = gray[y:y+h, x:x+w]
-        ojos = eye_cascade.detectMultiScale(roi_gray)
-        ojos_abs = [(x+ex, y+ey, ew, eh) for (ex, ey, ew, eh) in ojos]
-        ojos_todos.extend(ojos_abs)
+    #for (x, y, w, h) in rostros:
+     #   roi_gray = gray[y:y+h, x:x+w]
+      #  ojos = eye_cascade.detectMultiScale(roi_gray)
+       # ojos_abs = [(x+ex, y+ey, ew, eh) for (ex, ey, ew, eh) in ojos]
+        #ojos_todos.extend(ojos_abs)
 
-    return rostros, ojos_todos
+    return rostros, []
 
 def aplicar_convolucion_en_region(img_gray, x, y, w, h, context):
     roi = img_gray[y:y+h, x:x+w].copy()
@@ -84,45 +84,54 @@ def colocar_overlay(base, overlay, x, y):
 def filtro_ups(imagen_color):
     context = device.make_context()
     try:
-        # Cargar overlay de personaje
+        # Cargar overlay de personaje de don bosquito
         bosco_path = os.path.join(os.path.dirname(__file__), "bosco.png")
         bosco_img = cv2.imread(bosco_path, cv2.IMREAD_UNCHANGED)
+        
+        marco_path = os.path.join(os.path.dirname(__file__), "marco.png")
+        marco_img = cv2.imread(marco_path, cv2.IMREAD_UNCHANGED)
+
+        logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
+        logo_img = cv2.imread(logo_path, cv2.IMREAD_UNCHANGED)
+        
         if bosco_img is None or bosco_img.shape[2] != 4:
             raise ValueError("La imagen 'bosco.png' debe tener canal alfa (RGBA)")
 
         # Overlay de ojos
-        overlay_path = os.path.join(os.path.dirname(__file__), "ups.png")
-        overlay_img = cv2.imread(overlay_path, cv2.IMREAD_UNCHANGED)
-        if overlay_img is None or overlay_img.shape[2] != 4:
-            raise ValueError("La imagen 'ups.png' debe tener canal alfa (RGBA)")
+        #overlay_path = os.path.join(os.path.dirname(__file__), "ups.png")
+        #overlay_img = cv2.imread(overlay_path, cv2.IMREAD_UNCHANGED)
+        #if overlay_img is None or overlay_img.shape[2] != 4:
+            #  raise ValueError("La imagen 'ups.png' debe tener canal alfa (RGBA)")
 
         rostros, ojos = detectar_rostros_y_ojos(imagen_color)
         img_gray = cv2.cvtColor(imagen_color, cv2.COLOR_BGR2GRAY)
 
-        for (x, y, w, h) in rostros:
-            # Aplicar filtro artístico en el rostro
-            #region_convol = aplicar_convolucion_en_region(img_gray, x, y, w, h, context)
-            #imagen_color[y:y+h, x:x+w, 0] = region_convol
-            #imagen_color[y:y+h, x:x+w, 1] = region_convol
-            #imagen_color[y:y+h, x:x+w, 2] = region_convol
+        if len(rostros) > 0:
+            for (x, y, w, h) in rostros:
+                # Aplicar overlay en el rostro
+                escala = 1.3
+                new_w = int(w * escala)
+                new_h = int(h * escala)
+                bosco_resized = cv2.resize(bosco_img, (new_w, new_h))
+                offset_x = x - int((new_w - w) / 2)
+                offset_y = y - int(h * 0.6)
+                colocar_overlay_fuera_del_rostro_elipse(imagen_color, bosco_resized, offset_x, offset_y, (x, y, w, h))
+        else:
+            # Redimensionar marco y colocarlo encima
+            marco_redim = cv2.resize(marco_img, (imagen_color.shape[1], imagen_color.shape[0]))
+            colocar_overlay(imagen_color, marco_redim, 0, 0)
 
-            # Redimensionar bosco.png al tamaño adecuado
-            escala = 1.3
-            new_w = int(w * escala)
-            new_h = int(h * escala)
-            bosco_resized = cv2.resize(bosco_img, (new_w, new_h))
+            # Redimensionar logo y colocarlo en la esquina superior derecha
+            h_logo, w_logo = logo_img.shape[:2]
+            scale_factor = 0.4
+            logo_resized = cv2.resize(logo_img, (int(w_logo * scale_factor), int(h_logo * scale_factor)))
+            margen_derecho = 100  # píxeles desde el borde derecho
+            margen_superior = 150  # píxeles desde el borde superior
 
-            # Calcular posición sobre el rostro (por encima, centrado)
-            offset_x = x - int((new_w - w) / 2)
-            offset_y = y - int(h * 0.6)  # se eleva un poco para parecer montado
+            x_logo = imagen_color.shape[1] - logo_resized.shape[1] - margen_derecho
+            y_logo = margen_superior
 
-            # Colocar bosco evitando la zona del rostro
-            #colocar_overlay_fuera_del_rostro(imagen_color, bosco_resized, offset_x, offset_y, (x, y, w, h))
-            colocar_overlay_fuera_del_rostro_elipse(imagen_color, bosco_resized, offset_x, offset_y, (x, y, w, h))
-
-        for (x, y, w, h) in ojos:
-            mini_overlay = cv2.resize(overlay_img, (w, h))
-            colocar_overlay(imagen_color, mini_overlay, x, y)
+            colocar_overlay(imagen_color, logo_resized, x_logo, y_logo)
 
         return imagen_color
 
