@@ -83,3 +83,10 @@ Levantamos el servicio con:
 docker run --rm -it --gpus all -p 5000:5000 servicio-cuda    
 ```
 
+## Repositorios relacionados
+Este punto es el Frontend del sistema, el cual utilizara el usuario final.
+Repositorios del resto de arquitectura:
+
+*Webflux:* https://github.com/dfao2003/api-webflux
+
+*Flutter:* https://github.com/Chris-Liter/upsglam2 
